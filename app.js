@@ -1,8 +1,10 @@
-const express = require ("express")
-const app = express ();
+require('dotenv').config();
+
+const express = require("express")
+const app = express();
 
 //body parsing
-app.use (express .json ());
+app.use(express.json());
 
 let products = [
   { id: 1, name: "iPhone 13", brand: "Apple", category: "Phone", price: 450000, quantity: 10, serialNumber: "SN-APL-0001", warrantyExpiry: "2027-03-15", lowStockLevel: 3 },
@@ -19,7 +21,37 @@ app.get("/", (req, res) => {
   res.send("Product Inventory API is running");
 });
 
-const PORT = 3000;
+//ROLE 2: READ ROUTES
+// GET /products - Retrieve all products
+app.get("/products", (req, res) => {
+  res.status(200).json(products);
+});
+
+// GET /products/low-stock - Retrieve products at or below low-stock level
+app.get("/products/low-stock", (req, res) => {
+  const lowStockProducts = products.filter(
+    (product) => product.quantity <= product.lowStockLevel
+  );
+
+  res.status(200).json(lowStockProducts);
+});
+
+// GET /products/:id - Retrieve a single product by ID
+app.get("/products/:id", (req, res) => {
+  const id = Number(req.params.id);
+
+  const product = products.find((product) => product.id === id);
+
+  if (!product) {
+    return res.status(404).json({
+      message: "Product not found"
+    });
+  }
+
+  res.status(200).json(product);
+});
+
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
