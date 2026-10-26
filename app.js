@@ -1,9 +1,8 @@
 require('dotenv').config();
-
-const express = require("express")
+const express = require("express");
 const app = express();
 
-//body parsing
+// body parsing
 app.use(express.json());
 
 let products = [
@@ -21,7 +20,8 @@ app.get("/", (req, res) => {
   res.send("Product Inventory API is running");
 });
 
-//ROLE 2: READ ROUTES
+// ROLE 2: READ ROUTES
+
 // GET /products - Retrieve all products
 app.get("/products", (req, res) => {
   res.status(200).json(products);
@@ -32,9 +32,33 @@ app.get("/products/low-stock", (req, res) => {
   const lowStockProducts = products.filter(
     (product) => product.quantity <= product.lowStockLevel
   );
-
   res.status(200).json(lowStockProducts);
 });
+
+// ROLE 4: GET /products/warranty-expiring
+// (must stay above /products/:id)
+// Products whose warranty ends within the next N days (default 30)
+app.get("/products/warranty-expiring", (req, res) => {
+  const days = req.query.days === undefined ? 30 : Number(req.query.days);
+
+  if (!Number.isInteger(days) || days < 0) {
+    return res.status(400).json({ message: "days must be a non-negative whole number" });
+  }
+
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  const cutoff = new Date(today);
+  cutoff.setUTCDate(cutoff.getUTCDate() + days);
+
+  const expiring = products.filter((product) => {
+    const expiry = new Date(`${product.warrantyExpiry}T00:00:00Z`);
+    return expiry >= today && expiry <= cutoff;
+  });
+
+  res.status(200).json(expiring);
+});
+
+// ROLE 3: CREATE ROUTE
 
 // POST /products - Create a new product
 app.post("/products", (req, res) => {
@@ -156,7 +180,6 @@ app.post("/products", (req, res) => {
 // GET /products/:id - Retrieve a single product by ID
 app.get("/products/:id", (req, res) => {
   const id = Number(req.params.id);
-
   const product = products.find((product) => product.id === id);
 
   if (!product) {
@@ -166,6 +189,91 @@ app.get("/products/:id", (req, res) => {
   }
 
   res.status(200).json(product);
+});
+
+// ROLE 4: UPDATE AND DELETE
+
+// PUT /products/:id - Update a product
+app.put("/products/:id", (req, res) => {
+  const id = Number(req.params.id);
+  const product = products.find((p) => p.id === id);
+
+  if (!product) {
+    return res.status(404).json({ message: "Product not found" });
+  }
+
+  const body = req.body || {};
+  const allowed = ["name", "brand", "category", "price", "quantity", "serialNumber", "warrantyExpiry", "lowStockLevel"];
+  const updates = {};
+  for (const key of allowed) {
+    if (body[key] !== undefined) updates[key] = body[key];
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json({ message: "Provide at least one field to update" });
+  }
+
+  // Text fields
+  for (const key of ["name", "brand", "category", "serialNumber"]) {
+    if (key in updates) {
+      if (typeof updates[key] !== "string" || updates[key].trim() === "") {
+        return res.status(400).json({ message: `${key} must be a non-empty text value` });
+      }
+      updates[key] = updates[key].trim();
+    }
+  }
+
+  // Number fields
+  if ("price" in updates && (typeof updates.price !== "number" || !Number.isFinite(updates.price) || updates.price <= 0)) {
+    return res.status(400).json({ message: "price must be a positive number" });
+  }
+  for (const key of ["quantity", "lowStockLevel"]) {
+    if (key in updates && (typeof updates[key] !== "number" || !Number.isInteger(updates[key]) || updates[key] < 0)) {
+      return res.status(400).json({ message: `${key} must be a non-negative integer` });
+    }
+  }
+
+  // Warranty date (YYYY-MM-DD)
+  if ("warrantyExpiry" in updates) {
+    const value = updates.warrantyExpiry;
+    const date = new Date(`${value}T00:00:00Z`);
+    if (
+      typeof value !== "string" ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(value) ||
+      Number.isNaN(date.getTime()) ||
+      date.toISOString().slice(0, 10) !== value
+    ) {
+      return res.status(400).json({ message: "warrantyExpiry must be a valid date in YYYY-MM-DD format" });
+    }
+  }
+
+  // Serial number must stay unique (ignore this product itself)
+  if ("serialNumber" in updates) {
+    const duplicate = products.some(
+      (p) => p.id !== id && p.serialNumber.toLowerCase() === updates.serialNumber.toLowerCase()
+    );
+    if (duplicate) {
+      return res.status(409).json({ message: "A product with this serial number already exists" });
+    }
+  }
+
+  Object.assign(product, updates);
+
+  res.status(200).json({ message: "Product updated successfully", product });
+});
+
+// DELETE /products/:id - Delete a product
+app.delete("/products/:id", (req, res) => {
+  const id = Number(req.params.id);
+  const index = products.findIndex((p) => p.id === id);
+
+  if (index === -1) {
+    return res.status(404).json({ message: "Product not found" });
+  }
+
+  const [deleted] = products.splice(index, 1);
+
+  res.status(200).json({ message: "Product deleted successfully", product: deleted });
 });
 
 const PORT = process.env.PORT || 3000;
