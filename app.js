@@ -36,6 +36,123 @@ app.get("/products/low-stock", (req, res) => {
   res.status(200).json(lowStockProducts);
 });
 
+// POST /products - Create a new product
+app.post("/products", (req, res) => {
+  const {
+    name,
+    brand,
+    category,
+    price,
+    quantity,
+    serialNumber,
+    warrantyExpiry,
+    lowStockLevel
+  } = req.body || {};
+
+  // 1. Check that all required fields are provided
+  const requiredFields = {
+    name,
+    brand,
+    category,
+    price,
+    quantity,
+    serialNumber,
+    warrantyExpiry,
+    lowStockLevel
+  };
+
+  const missingFields = Object.entries(requiredFields)
+    .filter(([key, value]) =>
+      value === undefined ||
+      value === null ||
+      (typeof value === "string" && value.trim() === "")
+    )
+    .map(([key]) => key);
+
+  if (missingFields.length > 0) {
+    return res.status(400).json({
+      message: "All fields are required",
+      missingFields
+    });
+  }
+
+  // 2. Validate text fields
+  if (
+    typeof name !== "string" ||
+    typeof brand !== "string" ||
+    typeof category !== "string" ||
+    typeof serialNumber !== "string"
+  ) {
+    return res.status(400).json({
+      message: "Name, brand, category, and serial number must be text"
+    });
+  }
+
+  // 3. Validate numeric fields
+  if (
+    typeof price !== "number" ||
+    !Number.isFinite(price) ||
+    price <= 0 ||
+    typeof quantity !== "number" ||
+    !Number.isInteger(quantity) ||
+    quantity < 0 ||
+    typeof lowStockLevel !== "number" ||
+    !Number.isInteger(lowStockLevel) ||
+    lowStockLevel < 0
+  ) {
+    return res.status(400).json({
+      message: "Price must be positive; quantity and lowStockLevel must be non-negative integers"
+    });
+  }
+
+  // 4. Validate warranty expiry date (YYYY-MM-DD)
+  const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+  const expiryDate = new Date(`${warrantyExpiry}T00:00:00Z`);
+
+  if (
+    typeof warrantyExpiry !== "string" ||
+    !datePattern.test(warrantyExpiry) ||
+    Number.isNaN(expiryDate.getTime()) ||
+    expiryDate.toISOString().slice(0, 10) !== warrantyExpiry
+  ) {
+    return res.status(400).json({
+      message: "Warranty expiry must be a valid date in YYYY-MM-DD format"
+    });
+  }
+
+  // 5. Reject duplicate serial numbers (case-insensitive)
+  const duplicateSerial = products.some(
+    (product) =>
+      product.serialNumber.toLowerCase() === serialNumber.trim().toLowerCase()
+  );
+
+  if (duplicateSerial) {
+    return res.status(409).json({
+      message: "A product with this serial number already exists"
+    });
+  }
+
+  // 6. Generate a new ID and create the product
+  const newProduct = {
+    id: Math.max(0, ...products.map((product) => product.id)) + 1,
+    name: name.trim(),
+    brand: brand.trim(),
+    category: category.trim(),
+    price,
+    quantity,
+    serialNumber: serialNumber.trim(),
+    warrantyExpiry,
+    lowStockLevel
+  };
+
+  products.push(newProduct);
+
+  return res.status(201).json({
+    message: "Product created successfully",
+    product: newProduct
+  });
+});
+
 // GET /products/:id - Retrieve a single product by ID
 app.get("/products/:id", (req, res) => {
   const id = Number(req.params.id);
