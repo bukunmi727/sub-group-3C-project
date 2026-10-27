@@ -177,6 +177,144 @@ app.post("/products", (req, res) => {
   });
 });
 
+// ROLE 3.1 
+
+// PATCH /products/:id - Update selected product fields
+app.patch("/products/:id", (req, res) => {
+  const id = Number(req.params.id);
+
+  const product = products.find((item) => item.id === id);
+
+  if (!product) {
+    return res.status(404).json({
+      message: "Product not found"
+    });
+  }
+
+  const updates = req.body;
+
+  if (
+    !updates ||
+    typeof updates !== "object" ||
+    Array.isArray(updates)
+  ) {
+    return res.status(400).json({
+      message: "Request body must be a JSON object"
+    });
+  }
+
+  const allowedFields = [
+    "name",
+    "brand",
+    "category",
+    "price",
+    "quantity",
+    "serialNumber",
+    "warrantyExpiry",
+    "lowStockLevel"
+  ];
+
+  const fields = Object.keys(updates);
+
+  if (fields.length === 0) {
+    return res.status(400).json({
+      message: "Provide at least one field to update"
+    });
+  }
+
+  const invalidFields = fields.filter(
+    (field) => !allowedFields.includes(field)
+  );
+
+  if (invalidFields.length > 0) {
+    return res.status(400).json({
+      message: "Invalid fields provided",
+      invalidFields
+    });
+  }
+
+  // Validate text fields
+  for (const field of ["name", "brand", "category", "serialNumber"]) {
+    if (
+      field in updates &&
+      (typeof updates[field] !== "string" ||
+        updates[field].trim() === "")
+    ) {
+      return res.status(400).json({
+        message: `${field} must be non-empty text`
+      });
+    }
+  }
+
+  // Validate numeric fields
+  if (
+    ("price" in updates &&
+      (typeof updates.price !== "number" ||
+        !Number.isFinite(updates.price) ||
+        updates.price <= 0)) ||
+    ("quantity" in updates &&
+      (!Number.isInteger(updates.quantity) ||
+        updates.quantity < 0)) ||
+    ("lowStockLevel" in updates &&
+      (!Number.isInteger(updates.lowStockLevel) ||
+        updates.lowStockLevel < 0))
+  ) {
+    return res.status(400).json({
+      message: "Price must be positive; quantity and lowStockLevel must be non-negative integers"
+    });
+  }
+
+  // Validate warranty date if supplied
+  if ("warrantyExpiry" in updates) {
+    const date = updates.warrantyExpiry;
+    const parsedDate = new Date(`${date}T00:00:00Z`);
+
+    if (
+      typeof date !== "string" ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+      Number.isNaN(parsedDate.getTime()) ||
+      parsedDate.toISOString().slice(0, 10) !== date
+    ) {
+      return res.status(400).json({
+        message: "Warranty expiry must be a valid YYYY-MM-DD date"
+      });
+    }
+  }
+
+  // Prevent duplicate serial numbers on other products
+  if ("serialNumber" in updates) {
+    const serialNumber = updates.serialNumber.trim();
+
+    const duplicate = products.some(
+      (item) =>
+        item.id !== id &&
+        item.serialNumber.toLowerCase() === serialNumber.toLowerCase()
+    );
+
+    if (duplicate) {
+      return res.status(409).json({
+        message: "A product with this serial number already exists"
+      });
+    }
+  }
+
+  // Apply only the fields supplied in the request
+  const cleanUpdates = { ...updates };
+
+  for (const field of ["name", "brand", "category", "serialNumber"]) {
+    if (field in cleanUpdates) {
+      cleanUpdates[field] = cleanUpdates[field].trim();
+    }
+  }
+
+  Object.assign(product, cleanUpdates);
+
+  return res.status(200).json({
+    message: "Product updated successfully",
+    product
+  });
+});
+
 // GET /products/:id - Retrieve a single product by ID
 app.get("/products/:id", (req, res) => {
   const id = Number(req.params.id);
