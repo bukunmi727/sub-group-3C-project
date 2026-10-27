@@ -1,0 +1,213 @@
+{
+  "info": {
+    "_postman_id": "c9118106-63f5-499b-b8e4-7ebd43595491",
+    "name": "Sub-Group-3C-Product-Inventory-API",
+    "description": "## Product Inventory API\n\nThis collection covers the core endpoints for managing a **product inventory system**, running locally at `localhost:4000`. It is designed to support full lifecycle management of products — from creation and retrieval to updates, deletions, and inventory monitoring.\n\n### Endpoints Included\n\n| Method | Endpoint | Description |\n| --- | --- | --- |\n| `GET` | `/products/:id` | Retrieve details of a single product by ID |\n| `POST` | `/products` | Create a new product with full details (name, brand, category, price, quantity, serial number, warranty, and low-stock threshold) |\n| `PATCH` | `/products/:id` | Partially update an existing product's fields |\n| `PUT` | `/products/:id` | Fully overwrite an existing product record |\n| `DELETE` | `/products/:id` | Remove a product from the inventory |\n| `GET` | `/products/low-stock` | Retrieve products that have fallen below their defined low-stock level |\n| `GET` | `/products/warranty-expiring` | Retrieve products with warranties expiring within a given period |\n| `GET` | `/products/warranty-expiring?days=7` | Test a custom warranty expiry period using query parameters |\n\n### Key Features\n\n- **CRUD operations** for individual product records\n    \n- **Inventory alerts** — identify products running low on stock\n    \n- **Warranty tracking** — monitor products with upcoming warranty expirations, including support for custom date ranges",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "59179252",
+    "_collection_link": "https://go.postman.co/collection/59179252-c9118106-63f5-499b-b8e4-7ebd43595491?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Get one product",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "localhost:4000/products/3",
+          "host": [
+            "localhost"
+          ],
+          "port": "4000",
+          "path": [
+            "products",
+            "3"
+          ]
+        },
+        "description": "Retrieves the full details of a single product by its unique ID.\n\nThe product ID is specified as a path parameter in the URL (e.g., `/products/3`). A successful response returns all stored fields for that product, including its name, brand, category, price, quantity, serial number, warranty expiry date, and low-stock threshold.\n\nUse this request to look up a specific product record in the inventory."
+      },
+      "response": []
+    },
+    {
+      "name": "Get low-stock products",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "localhost:4000/products/low-stock",
+          "host": [
+            "localhost"
+          ],
+          "port": "4000",
+          "path": [
+            "products",
+            "low-stock"
+          ]
+        },
+        "description": "Retrieves a list of all products whose current quantity has fallen at or below their defined low-stock threshold.\n\nNo parameters are required. The API compares each product's `quantity` against its `lowStockLevel` and returns only those that need restocking.\n\nUse this request to monitor inventory levels and identify products that require replenishment."
+      },
+      "response": []
+    },
+    {
+      "name": "Get expiring warranties",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "localhost:4000/products/warranty-expiring",
+          "host": [
+            "localhost"
+          ],
+          "port": "4000",
+          "path": [
+            "products",
+            "warranty-expiring"
+          ]
+        },
+        "description": "Retrieves a list of products whose warranties are expiring within the default upcoming period defined by the API.\n\nNo parameters are required for this request. The server evaluates each product's `warrantyExpiry` date and returns those falling within the threshold window.\n\nUse this request to get a quick overview of products with upcoming warranty expirations, helping to plan maintenance or replacement actions."
+      },
+      "response": []
+    },
+    {
+      "name": "Test a custom period",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "localhost:4000/products/warranty-expiring?days=7",
+          "host": [
+            "localhost"
+          ],
+          "port": "4000",
+          "path": [
+            "products",
+            "warranty-expiring"
+          ],
+          "query": [
+            {
+              "key": "days",
+              "value": "7"
+            }
+          ]
+        },
+        "description": "Retrieves products whose warranties are expiring within a custom number of days, specified via the `days` query parameter.\n\n| Parameter | Type | Description |\n|-----------|------|-------------|\n| `days` | integer | The number of days from today within which warranties must expire to be included in the results |\n\nFor example, setting `days=7` returns all products with warranties expiring within the next 7 days. This allows flexible, time-scoped warranty checks beyond the default period.\n\nUse this request to test or fine-tune the warranty expiry window for specific operational needs."
+      },
+      "response": []
+    },
+    {
+      "name": "Create product",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"name\": \"Dell Inspiron 15\",\r\n  \"brand\": \"Dell\",\r\n  \"category\": \"Laptop\",\r\n  \"price\": 85000,\r\n  \"quantity\": 6,\r\n  \"serialNumber\": \"SN-DEL-0009\",\r\n  \"warrantyExpiry\": \"2028-05-20\",\r\n  \"lowStockLevel\": 2\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "localhost:4000/products",
+          "host": [
+            "localhost"
+          ],
+          "port": "4000",
+          "path": [
+            "products"
+          ]
+        },
+        "description": "Creates a new product entry in the inventory.\n\nThe request body must be sent as JSON and include all required product fields:\n\n| Field | Type | Description |\n|-------|------|-------------|\n| `name` | string | Full product name |\n| `brand` | string | Manufacturer or brand |\n| `category` | string | Product category (e.g., Laptop, Mouse) |\n| `price` | number | Unit price |\n| `quantity` | integer | Current stock quantity |\n| `serialNumber` | string | Unique serial number for the product |\n| `warrantyExpiry` | string (YYYY-MM-DD) | Warranty expiration date |\n| `lowStockLevel` | integer | Quantity threshold that triggers a low-stock alert |\n\nA successful response returns the newly created product record with its assigned ID."
+      },
+      "response": []
+    },
+    {
+      "name": "Partially update a product",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"quantity\": 2\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "localhost:4000/products/2",
+          "host": [
+            "localhost"
+          ],
+          "port": "4000",
+          "path": [
+            "products",
+            "2"
+          ]
+        },
+        "description": "Partially updates one or more fields of an existing product record without overwriting the entire entry.\n\nThe product ID is specified as a path parameter in the URL (e.g., `/products/2`). Only the fields included in the JSON request body will be updated — all other fields remain unchanged.\n\nFor example, sending `{ \"quantity\": 2 }` updates only the stock quantity for that product.\n\nUse this request when you need to make targeted changes to a product, such as adjusting its price, quantity, or low-stock threshold, without resending the full product data."
+      },
+      "response": []
+    },
+    {
+      "name": "Overwrite",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"name\": \"Dell Latitude\",\r\n  \"brand\": \"Dell\",\r\n  \"category\": \"Laptop\",\r\n  \"price\": 85000,\r\n  \"quantity\": 6,\r\n  \"serialNumber\": \"SN-DEL-0009\",\r\n  \"warrantyExpiry\": \"2028-05-20\",\r\n  \"lowStockLevel\": 2\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "localhost:4000/products/9",
+          "host": [
+            "localhost"
+          ],
+          "port": "4000",
+          "path": [
+            "products",
+            "9"
+          ]
+        },
+        "description": "Fully overwrites an existing product record with the data provided in the request body.\n\nThe product ID is specified as a path parameter in the URL (e.g., `/products/9`). Unlike a partial update, this request replaces the entire product entry — all fields must be included in the JSON body, as any omitted fields may be cleared or reset.\n\n| Field | Type | Description |\n|-------|------|-------------|\n| `name` | string | Full product name |\n| `brand` | string | Manufacturer or brand |\n| `category` | string | Product category |\n| `price` | number | Unit price |\n| `quantity` | integer | Current stock quantity |\n| `serialNumber` | string | Unique serial number |\n| `warrantyExpiry` | string (YYYY-MM-DD) | Warranty expiration date |\n| `lowStockLevel` | integer | Low-stock alert threshold |\n\nUse this request when you need to completely replace a product's data, such as during a bulk data correction or a full record refresh."
+      },
+      "response": []
+    },
+    {
+      "name": "Remove product",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": " {\r\n        \"name\": \"Dell Latitude\",\r\n        \"brand\": \"Dell\",\r\n        \"category\": \"Mouse\",\r\n        \"price\": 500,\r\n        \"quantity\": 6,\r\n        \"serialNumber\": \"SN-DEL-0002\",\r\n        \"warrantyExpiry\": \"2028-05-20\",\r\n        \"lowStockLevel\": 3\r\n    }\r\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "localhost:4000/products/10",
+          "host": [
+            "localhost"
+          ],
+          "port": "4000",
+          "path": [
+            "products",
+            "10"
+          ]
+        },
+        "description": "Permanently removes a product from the inventory by its unique ID.\n\nThe product ID is specified as a path parameter in the URL (e.g., `/products/10`). No request body is required. A successful response confirms the deletion of the product record.\n\nUse this request to remove discontinued, duplicate, or incorrectly entered products from the inventory system. This action is irreversible — the product record cannot be recovered once deleted."
+      },
+      "response": []
+    }
+  ]
+}
